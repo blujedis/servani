@@ -16,11 +16,49 @@
     "host"
   ],
   "author": "Blujedi LLC <blujedicorp@gmail.com>",
+  "homepage": "https://github.com/blujedis/servani#readme",
+  "bugs": {
+    "url": "https://github.com/blujedis/servani/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/blujedis/servani.git"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  },
+  "commitlint": {
+    "extends": [
+      "@commitlint/config-conventional"
+    ]
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "git add"
+    ],
+    "*.{json,md,yml}": [
+      "git add"
+    ]
+  },
+  "engines": {
+    "node": ">= 10.13.0"
+  },
   "license": "MIT",
   "dependencies": {
     "ansi-colors": "^4.1.1",
     "command-exists": "^1.2.9",
     "http-server": "^0.12.3",
     "node-php": "^0.0.1"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^8.3.5",
+    "@commitlint/config-conventional": "^8.3.4",
+    "eslint": "^6.8.0",
+    "husky": "^4.2.5",
+    "lint-staged": "^10.1.7"
   }
 }
