@@ -75,6 +75,7 @@ const isValidCommand = (cmd, checkOnly = true) => {
 };
 
 const parseOptions = (command = 'node', args = []) => {
+
   command = !isValidCommand(command) ? 'node' : command;
   const map = { command, rest: [], args: [] };
   const split = args.indexOf('--');
@@ -83,6 +84,7 @@ const parseOptions = (command = 'node', args = []) => {
   const host = ['--host', '-h', '-a'];
   const port = ['--port', '-p'];
   const exclude = [];
+
   const filtered = args.reduce((a, c, i) => {
     if (exclude.includes(i))
       return a;
@@ -98,9 +100,16 @@ const parseOptions = (command = 'node', args = []) => {
     }
     return [...a, c];
   }, []);
+
   map.args = filtered;
   map.rest = rest;
   map.directory = dir;
+  const host = process.env.HOST ? process.env.HOST : '0.0.0.0';
+  let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
+  if (isNaN(port)) {
+    port = 5000;
+    console.warn(colorize(`Invalid port detected falling back to 5000`, 'yellowBright'));
+  }
   return { port: 5000, host: '0.0.0.0', ...map };
 }
 
