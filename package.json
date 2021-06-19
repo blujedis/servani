@@ -1,6 +1,6 @@
 {
   "name": "servani",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Runs Python, PHP or Node Http Server.",
   "bin": "bin/cli",
   "scripts": {
