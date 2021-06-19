@@ -77,15 +77,20 @@ servany -h
 
 For PHP, Servani will always provide the following arguments/options hence there is no need for you to include them.
 
-> -S HOST:PORT
+```sh
+-S HOST:PORT
+```
 
 For Python it is similar. Servani will always provide the following arguments/options. Again there is no need for you to include them in your command.
 
 **For Python 2.7.x**
 
-> -m SimpleHTTPServer PORT
+```sh
+-m SimpleHTTPServer PORT
+```
 
 **For Python 3.x.x**
 
-> -m http.server --cgi --bind HOST --directory /path/to/serve PORT
-
+```sh
+-m http.server --cgi --bind HOST --directory /path/to/serve PORT
+```
