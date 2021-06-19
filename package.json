@@ -1,0 +1,26 @@
+{
+  "name": "servani",
+  "version": "1.0.0",
+  "description": "Runs Python, PHP or Node Http Server.",
+  "bin": "bin/cli",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "serve",
+    "http-server",
+    "php",
+    "python",
+    "python3",
+    "web",
+    "host"
+  ],
+  "author": "Blujedi LLC <blujedicorp@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "ansi-colors": "^4.1.1",
+    "command-exists": "^1.2.9",
+    "http-server": "^0.12.3",
+    "node-php": "^0.0.1"
+  }
+}

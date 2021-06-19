@@ -1,0 +1,207 @@
+#!/usr/bin/env node
+
+const { spawn, spawnSync } = require('child_process');
+const { join } = require('path');
+const pkg = require(join(__dirname, '../package.json'));
+const httpPkg = require(join(__dirname, '../node_modules/http-server/package.json'));
+const colors = require('ansi-colors');
+const exists = require('command-exists').sync
+const { httpServerHelp } = require('./help');
+
+const argv = process.argv.slice(2);
+const cmds = ['py', 'py3', 'python', 'python3', 'php', 'node'];
+const appName = pkg.name;
+const version = pkg.version;
+
+let cmd = cmds.includes(argv[0]) ? argv.shift() : 'node';
+let dir = !/^-/.test(argv[0]) && typeof argv[0] !== 'undefined' ? argv.shift() : process.cwd();
+const isHelp = argv.includes('-h') || argv.includes('--help');
+const isVersion = argv.includes('-v') || argv.includes('--version');
+
+const capitalize = str => str.charAt(0).toUpperCase() + str.slice(1);
+
+const colorize = (str = '', ...styles) => {
+  if (!process.stdout.isTTY) return str;
+  return styles.reduce((a, c) => colors[c](a), str);
+}
+
+const showError = (err, pad = false) => {
+  if (pad)
+    console.log();
+  console.error(colors.redBright(err.message));
+  console.log();
+  console.error(colors.dim(err.stack.split('\n').slice(1).join('\n')));
+  if (pad)
+    console.log();
+  process.exit(err.code || 1);
+};
+
+const runner = (cmd, args, options, sync = false) => {
+
+  if (typeof options === 'boolean') {
+    sync = options;
+    options = undefined;
+  }
+
+  if (!Array.isArray(args) && typeof args !== 'undefined') {
+    options = args;
+    args = [];
+  }
+
+  args = args || [];
+  options = { stdio: 'inherit', ...options };
+
+  const spawner = sync ? spawnSync : spawn;
+  const instance = spawner(cmd, args, options);
+
+  if (sync && instance.error) {
+    showError(instance.error);
+  }
+  else if (!sync) {
+    instance.on('error', showError);
+  }
+
+};
+
+const isValidCommand = (cmd, checkOnly = true) => {
+  if (!cmds.includes(cmd)) {
+    if (!checkOnly) {
+      console.error(colors.redBright(`\nCommand ${cmd} is not valid`))
+      console.error(`\nPlease use one of [${cmds.join(', ')}]\n`);
+    }
+    return false;
+  }
+  return true;
+};
+
+const parseOptions = (command = 'node', args = []) => {
+  command = !isValidCommand(command) ? 'node' : command;
+  const map = { command, rest: [], args: [] };
+  const split = args.indexOf('--');
+  const rest = split >= 0 ? args.slice(split + 1) : [];
+  args = rest.length ? args.slice(0, split) : args;
+  const host = ['--host', '-h', '-a'];
+  const port = ['--port', '-p'];
+  const exclude = [];
+  const filtered = args.reduce((a, c, i) => {
+    if (exclude.includes(i))
+      return a;
+    if (host.includes(c)) {
+      map.host = args[i + 1];
+      exclude.push(i + 1);
+      return a;
+    }
+    if (port.includes(c)) {
+      map.port = parseInt(args[i + 1], 10);
+      exclude.push(i + 1);
+      return a;
+    }
+    return [...a, c];
+  }, []);
+  map.args = filtered;
+  map.rest = rest;
+  map.directory = dir;
+  return { port: 5000, host: '0.0.0.0', ...map };
+}
+
+const showHelp = () => {
+
+  const title = colorize(' ' + capitalize(appName), 'cyanBright', 'bold');
+  const ver = colorize(` version: ${version}`, 'cyanBright');
+  const hr = colorize('=-'.repeat(44) + '=', 'cyanBright');
+  const cmdsStr = colorize('commands:', 'blueBright');
+  const optsStr = colorize('options (global):', 'blueBright');
+  const refsStr = colorize('references:', 'blueBright');
+  const usageStr = colorize('usage: $ servani [command] [options]', 'cyanBright', 'bold');
+  const note = colorize(`
+NOTE: Primary options are global for any command and will be passed
+    to the underlying command. Take care not to duplicate arguments
+    as global options are normalize and passed as if you had entered
+    them manually!
+  `, 'dim');
+  const mainHelp = `
+${hr}
+
+${title}
+${ver}
+
+${hr}
+
+${note}
+
+${usageStr}
+
+${cmdsStr}
+  node              serve using http-server library
+  php               serve using php-cgi
+  py                serve using pythonServer
+  py3               serve using python3Server
+
+${optsStr}
+  --host, -h, -a    the host to bind to      (default: 0.0.0.0)
+  --port, -p        the port to bind to      (default: 5000)
+  --help, -h        shows help      
+  --version, -v     show the version
+
+  `;
+
+  console.log(mainHelp);
+
+  console.log(httpServerHelp);
+  console.log();
+
+  const references = `
+${refsStr}
+  http-server      https://www.npmjs.com/package/http-server
+  php              https://www.php.net/manual/en/features.commandline.webserver.php
+  python           https://docs.python.org/3/library/http.server.html
+
+  `
+  console.log(references);
+  process.exit(0);
+
+};
+
+if (isHelp)
+  return showHelp();
+
+if (isVersion) {
+  console.log('Servani', pkg.version);
+  if (exists('python'))
+    runner('python', ['--version'], true);
+  if (exists('python3'))
+    runner('python3', ['--version'], true);
+  console.log('http-server', httpPkg.version);
+  process.exit();
+}
+
+const { command, host, port, args, rest, directory } = parseOptions(cmd, argv);
+
+// python -m SimpleHTTPServer 8000
+// python3 -m http.server --cgi 8080
+if (command.startsWith('py')) {
+  const _command = command === 'py3' ? 'python3' : 'python';
+  if (!exists(_command))
+    return showError(new Error(`Please ensure ${command} exists in your path!`), true);
+  const baseArgs = command.includes(3)
+    ? ['-m', 'http.server', '--bind', host, '--cgi', port, '--directory', directory]
+    : ['-m', 'SimpleHTTPServer', port]; // 2.7 doesn't support bind or directory.
+  const allArgs = [...baseArgs, ...args, ...rest];
+  runner(_command, allArgs);
+  return;
+}
+
+// php -S localhost:2222
+else if (command === 'php') {
+  if (!exists(command))
+    return showError(new Error(`Please ensure PHP exists in your path!`), true);
+  const baseArgs = ['-S', `${host}:${port}`, '-t', directory, ...args, ...rest];
+  runner('php', baseArgs);
+  return;
+}
+
+else {
+  const baseArgs = [directory, '-a', host, '-p', port, ...args, ...rest];
+  runner('http-server', baseArgs);
+}
+
